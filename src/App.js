@@ -9,7 +9,18 @@ import ToyContainer from './components/ToyContainer'
 class App extends React.Component{
 
   state = {
-    display: false
+    display: false,
+    toys: []
+  }
+
+  componentDidMount() {
+    fetch("http://localhost:3000/toys")
+      .then((response) => response.json())
+      .then((toys) => {
+        this.setState({
+          toys: toys
+        })
+      });
   }
 
   handleClick = () => {
@@ -19,20 +30,60 @@ class App extends React.Component{
     })
   }
 
+  addToy = (toy) => {
+    this.setState((prevState, prevProps) => {
+      return {
+        toys: [...prevState.toys, toy]
+      }
+    })
+  }
+
+  deleteToy = (deletedToy) => {
+    fetch('http://localhost:3000/toys/'+deletedToy.id, {method: 'DELETE'})
+    .then(res=>res.json())
+    .then(()=>{
+      this.setState({
+        toys: this.state.toys.filter((toy)=> toy !== deletedToy )
+      })
+    })
+  }
+
+  addLikes = (likedToy) => {
+    const configObj = {
+      method: 'PATCH',
+      headers: {
+        "Content-Type": "application/json",
+        "Accepts": "application/json"
+      },
+      body: JSON.stringify({ likes: likedToy.likes + 1 })
+    }
+
+    fetch('http://localhost:3000/toys/'+likedToy.id, configObj)
+    .then(response => response.json())
+    .then(json => {
+      this.setState((prevState) => {
+        const index = prevState.toys.findIndex((t) => json.id === t.id)
+        return {
+          toys: [...prevState.toys.slice(0, index), json, ...prevState.toys.slice(index + 1)]
+        }
+      })
+    })
+  }
+
   render(){
     return (
       <>
         <Header/>
         { this.state.display
             ?
-          <ToyForm/>
+          <ToyForm addToy={this.addToy} />
             :
           null
         }
         <div className="buttonContainer">
           <button onClick={this.handleClick}> Add a Toy </button>
         </div>
-        <ToyContainer/>
+        <ToyContainer toys={this.state.toys} deleteToy={this.deleteToy} addLikes={this.addLikes} />
       </>
     );
   }
